@@ -22,7 +22,7 @@ app.listen(3000);
 
 ### Koa-router の 使用
 
-和 [Express](http://www.expressjs.com.cn/) 一样的语法，新学到了 Koa 的 prefix 写法，以前中间件只知道用原来封装原理是这样~
+和 [Express](http://www.expressjs.com.cn/) 一样的语法，新学到了 Koa 的 prefix 写法，以前中间件只知道放中间用，原来封装原理是这样（```"auth"```）~
 
 ```
 const Koa = require('koa');
