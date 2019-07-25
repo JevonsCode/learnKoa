@@ -1,4 +1,4 @@
-# Node.js の （系统 & 规范）学习
+# Node.js の（系统 & 规范）学习
 
 ## [Koa](https://koa.bootcss.com/) の 学习
 
@@ -48,3 +48,13 @@ app.use(userRouter.routes());
 app.listen(3000);
 ```
 *注意：记得要把`router`和自己定义的前置路由在后面挂载上*
+
+### HTTP 操作
+TODO
+
+### 良好的目录结构
+
+- 将路由单独放一个目录
+- 将控制器单独放一个目录
+- 使用“类 + 类方法”的方式组织控制器
+
