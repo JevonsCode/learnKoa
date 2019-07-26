@@ -1,8 +1,11 @@
 const Koa = require('koa');
-const bodyparser = require('koa-bodyparser')
+const bodyparser = require('koa-bodyparser');
 const app = new Koa();
+const routing = require('./routes');
 
+app.use(bodyparser());
+routing(app);
 
-app.use(router.routes());
-
-app.listen(3000);
+app.listen(3000, () => console.log(
+    ' 🍊 🍊 🍊 🍊 🍊 🍊 - POST: 3000 - 🍊 🍊 🍊 🍊 🍊 🍊 '
+));
