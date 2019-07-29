@@ -58,3 +58,44 @@ TODO
 - 将控制器单独放一个目录
 - 使用“类 + 类方法”的方式组织控制器
 
+*tip:（循环读取路由）*
+
+```
+module.exports = (app) => {
+    fs.readdirSync(__dirname).forEach(file => {
+        if(file === 'index.js') { return }
+        const route = require(`./${file}`);
+        app.use(route.routes()).use(route.allowedMethods());
+    });
+}
+```
+
+*让不同的目录做不同的事情，`controllers`中就是业务代码*
+
+### 异常状况 & 错误处理
+
+- 运行时错误，都返回 500
+- 逻辑错误，如找不到（404）、先决条件失败（412）、无法处理的实体（参数格式不对，412）etc
+
+Koa 对错误会有自己的处理
+如404`Not Found`
+500`Internal Server Error`
+412错误可以写成```ctx.throw(412)```*默认错误信息`Precondition Failed`*
+需要自己自定义错误信息时，写成```ctx.throw(412, "先决条件出错！")```
+
+### 自己编写错误处理中间件
+
+```
+app.use(async (ctx, next) => {
+    try {
+        await next();
+    } catch(err) {
+        ctx.status = err.status || err.statusCode || 500;
+        ctx.body = {
+            message: err.message
+        }
+    }
+});
+```
+Koa 自定义中间件可以捕获404外的所有异常，
+`status`和`statusCode`拿不到的时候就是运行异常了，在最后或一个500

@@ -1,5 +1,5 @@
 const db = [
-    { id: "🍎", name: "jevons" }
+    { name: "Jevons" }
 ];
 
 class UsersCtl {
@@ -8,6 +8,9 @@ class UsersCtl {
     }
 
     findById(ctx) {
+        if(ctx.params.id - 0 >= db.length) {
+            ctx.throw(412, "先决条件出错！");
+        }
         ctx.body = db[ctx.params.id - 0];
     }
 
@@ -22,7 +25,7 @@ class UsersCtl {
     }
 
     delete(ctx) {
-        db.splice(ctx.params.id - 1, 1);
+        db.splice(ctx.params.id - 0, 1);
         ctx.status = 204;
     }
 }
