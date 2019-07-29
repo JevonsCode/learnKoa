@@ -121,6 +121,8 @@ app.use(error());
 
 定制返回格式：`postFormat`
 
+**EX:**
+
 ```
 app.use(error({
     postFormat: (e, {stack, ...others}) => process.env.NODE_ENV === 'production' ? others : {stack, ...others}
@@ -133,3 +135,85 @@ app.use(error({
 "start": "cross-env NODE_ENV=production node app",
 "dev": "nodemon app"
 ```
+
+### 使用 Koa-parameter 校验参数
+
+安装：`npm i koa-parameter -S` || `yarn add koa-parameter -S`
+
+使用：
+
+```
+const parameter = require('koa-parameter');
+app.use(parameter(app));
+```
+**EX:**
+
+```
+ctx.verifyParams({
+    name: {
+        type: 'string',
+        required: true
+    },
+    age: {
+        type: 'number',
+        required: false
+    }
+})
+```
+
+## NoSQL
+
+### 什么是 NoSQL
+
+- 列存储（HBase）
+- **文档存储（MongoDB）**
+- Key-value 存储（Redis）
+- 图存储（FlockDB）
+- 对象存储（db4o）
+- XML 存储（BaseX）
+
+### WHY
+
+- 简单 （没有很多复杂的规范）
+- 便于横向拓展
+- 适合超大规模的数据存储
+- 很灵活地存储复杂结构的数据（Schema Free）
+
+### MongoDB
+
+**Introduction**
+- 来源 "Humongous"（庞大）
+- 面向文档存储的开源数据库
+- Written by C++
+
+**WHY**
+- 性能好（内存计算）
+- 大规模数据存储（可拓展性）
+- 可靠安全（本地复制、自动故障转移）
+- 方便存储复杂数据结构（Schema Free）
+
+### Mongoose
+
+安装：`npm i mongoose -S` || `yarn add mongoose -S`
+使用：
+
+```
+mongoose.connect(*连接信息*, { useNewUrlParser: true }, *连接成功回调*);
+mongoose.connection.on('error', console.error);
+```
+
+### 设计用户模块的 Schema
+
+写代码前要对这些模块的规范进行统一的设计
+
+用`mongoose`中的`Schema`来规范
+
+```
+const mongoose = require('mongoose');
+const { Schema, model } = mongoose;
+const userSchema = new Schema({
+    name: { type: String, required: true }
+});
+module.exports = model('User', userSchema);
+```
+*'User' 相当于集合的名字*
