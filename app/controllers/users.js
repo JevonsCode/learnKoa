@@ -4,12 +4,13 @@ const db = [
 
 class UsersCtl {
     find(ctx) {
+        a.b
         ctx.body = db
     }
 
     findById(ctx) {
         if(ctx.params.id - 0 >= db.length) {
-            ctx.throw(412, "先决条件出错！");
+            ctx.throw(412);
         }
         ctx.body = db[ctx.params.id - 0];
     }

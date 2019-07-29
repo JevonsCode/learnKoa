@@ -4,16 +4,19 @@
   "description": "learn koa",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon app"
+    "start": "cross-env NODE_ENV=production node app",
+    "dev": "nodemon app"
   },
   "author": "jevons lee",
   "license": "ISC",
   "dependencies": {
     "koa": "^2.7.0",
     "koa-bodyparser": "^4.2.1",
+    "koa-json-error": "^3.1.2",
     "koa-router": "^7.4.0"
   },
   "devDependencies": {
+    "cross-env": "^5.2.0",
     "nodemon": "^1.19.1"
   }
 }

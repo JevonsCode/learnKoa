@@ -80,8 +80,10 @@ module.exports = (app) => {
 Koa 对错误会有自己的处理
 如404`Not Found`
 500`Internal Server Error`
-412错误可以写成```ctx.throw(412)```*默认错误信息`Precondition Failed`*
-需要自己自定义错误信息时，写成```ctx.throw(412, "先决条件出错！")```
+
+**EX:**412错误可以写成```ctx.throw(412)```*默认错误信息`Precondition Failed`*
+
+需要自己**自定义错误信息**时，写成```ctx.throw(412, "先决条件出错！")```
 
 ### 自己编写错误处理中间件
 
@@ -99,3 +101,35 @@ app.use(async (ctx, next) => {
 ```
 Koa 自定义中间件可以捕获404外的所有异常，
 `status`和`statusCode`拿不到的时候就是运行异常了，在最后或一个500
+
+### Koa-json-error
+
+*直接用轮子*
+
+安装： `npm i koa-json-error -S` || `yarn add koa-json-error -S`
+
+使用：
+
+```
+const error = require('koa-json-error');
+app.use(error());
+```
+
+这个中间件会返回一个 JSON 字段，包含`name`, `message`, `stack`, `status`
+
+`stack`是会返回错误原因，只能用于开发环境
+
+定制返回格式：`postFormat`
+
+```
+app.use(error({
+    postFormat: (e, {stack, ...others}) => process.env.NODE_ENV === 'production' ? others : {stack, ...others}
+}));
+```
+
+*在Windows电脑上要安装cross-env来模拟环境，mac直接写`NODE_ENV=production`*
+
+```
+"start": "cross-env NODE_ENV=production node app",
+"dev": "nodemon app"
+```
