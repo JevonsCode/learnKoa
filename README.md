@@ -81,7 +81,7 @@ Koa 对错误会有自己的处理
 如404`Not Found`
 500`Internal Server Error`
 
-**EX:**412错误可以写成```ctx.throw(412)```*默认错误信息`Precondition Failed`*
+**EX:** 412错误可以写成```ctx.throw(412)```*默认错误信息`Precondition Failed`*
 
 需要自己**自定义错误信息**时，写成```ctx.throw(412, "先决条件出错！")```
 
