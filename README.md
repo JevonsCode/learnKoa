@@ -220,4 +220,126 @@ module.exports = model('User', userSchema);
 
 ### 用 Mongoose 的 CURD
 
+```
+class UsersCtl {
+    async find(ctx) {
+        ctx.body = await User.find();
+    }
+
+    async findById(ctx) {
+        const user = await User.findById(ctx.params.id);
+        if(!user) {
+            ctx.throw(404, '用户不存在');
+        }
+        ctx.body = user;
+    }
+
+    async create(ctx) {
+        ctx.verifyParams({
+            name: { 
+                type: 'string',
+                required: true
+            }
+        })
+        const user = await new User(ctx.request.body).save();
+        ctx.body = user;
+    }
+
+    async update(ctx) {
+        ctx.verifyParams({
+            name: {
+                type: 'string',
+                required: true
+            }
+        })
+        const user = await User.findByIdAndUpdate(ctx.params.id, ctx.request.body);
+        if(!user) { ctx.throw(404, '用户不存在'); }
+        ctx.body = user;
+    }
+
+    async delete(ctx) {
+        const user = await User.findByIdAndRemove(ctx.params.id);
+        if(!user) { ctx.throw(404, '用户不存在'); }
+        ctx.status = 204;
+    }
+}
+```
+
+*mongoose 的增删改查是真的比原生方便很多 QAQ*
+
+## [JWT](https://jwt.io/)
+
+### WHAT
+
+**JSON WEB TOKEN 是一个开放标准(RFC 7519)**
+
+构成：
+- Header    (头部)
+    - typ token 的类型，这里固定为 JWT
+    - alg 使用的 hash 算法，例如：HMAC SHA256 或者 RSA
+- Payload   (有效载荷)
+    - 存储需要传递的信息，如用户ID、用户名等
+    - 还包含元数据，如过期时间、发布人等
+    - 与 Header 不同，Payload 可以加密
+- Signature (签名)
+    - 将header与payload组合一起，生成一个字符串header.payload，然后再添加一个秘钥
+
+### 使用
+
+安装：`npm i jsonwebtoken -S` || `yarn add jsonwebtoken`
+
+```
+jwt = require('jsonwebtoken')
+token = jwt.sign({name: jevons}, 'secret')
+jwt.verify(token, 'secret')
+```
+
+### 实现用户注册
+
+- 设计用户 Schema  
+
+```
+const userSchema = new Schema({
+    __v: { type: Number, select: false },
+    name: { type: String, required: true },
+    password: { type: String, required: true, select: false }
+});
+```
+
+`select: false` 是 mongoose 自带的查询排除字段
+> if excluding, apply schematype select:false fields
+
+- 编写保证唯一性的逻辑  
+
+```
+const { name } = ctx.request.body;
+const repeatedUser = await User.findOne({ name });
+if(repeatedUser) { ctx.throw(409, '用户已经存在') }; // 409 状态码表示冲突
+```
+
+Tip: `router.patch('/:id', update); // put 是整体替换， patch 是部分替换`
+
+### 实现登录
+
+- 登录接口设计  
+- 用 jsonwebtoken 生成 token  
+
+```
+router.post('/login', login);
+...
+async login(ctx) {
+    ctx.verifyParams({
+        name: { type: 'string', required: true },
+        password: { type: 'string', required: true }
+    });
+    const user = await User.findOne(ctx.request.body);
+    if(!user) { ctx.throw(401, '用户名或密码不正确'); };
+    const { _id, name } = ctx.request.body;
+    const token = jsonwebtoken.sign({ _id, name }, secret, { expiresIn: '7d' });
+    ctx.body = { token };
+}
+```
+
+### 自己编写 Koa 中间件实现用户认证与授权
+
 
