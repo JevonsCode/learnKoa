@@ -342,4 +342,35 @@ async login(ctx) {
 
 ### 自己编写 Koa 中间件实现用户认证与授权
 
+**检查 token 中间件**
 
+```
+const auth = async (ctx, next) => {
+    const { authorization = '' } = ctx.request.header;
+    const token = authorization.replace('Bearer ', '');
+    try {
+        const user = jsonwebtoken.verify(token, secret);
+        ctx.state.user = user;
+    } catch(err) {
+        ctx.throw(401, err.message);
+    }
+    await next();
+}
+```
+
+**独立权限**
+
+```
+async checkOwner(ctx, next) {
+    if(ctx.params.id !== ctx.state.user._id) { ctx.throw(403, '没有权限') }
+    await next();
+}
+```
+
+### koa-jwt 中间件，不自己写轮子
+
+安装：`npm i koa-jwt -S` || `yarn add koa-jwt`
+
+- 使用中间件保护接口
+
+- 使用中间件获取用户信息
