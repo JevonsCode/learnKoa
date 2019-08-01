@@ -1,32 +1,27 @@
-const db = [
-    { name: "Jevons" }
-];
+const User = require('../models/users');
 
 class UsersCtl {
-    find(ctx) {
-        ctx.body = db
+    async find(ctx) {
+        ctx.body = await User.find();
     }
 
-    findById(ctx) {
-        if(ctx.params.id - 0 >= db.length) {
-            ctx.throw(412);
+    async findById(ctx) {
+        const user = await User.findById(ctx.params.id);
+        if(!user) {
+            ctx.throw(404, '用户不存在');
         }
-        ctx.body = db[ctx.params.id - 0];
+        ctx.body = user;
     }
 
-    create(ctx) {
+    async create(ctx) {
         ctx.verifyParams({
             name: { 
                 type: 'string',
                 required: true
-            },
-            age: {
-                type: 'number',
-                required: false
             }
         })
-        db.push(ctx.request.body);
-        ctx.body = ctx.request.body;
+        const user = await new User(ctx.request.body).save();
+        ctx.body = user;
     }
 
     update(ctx) {
