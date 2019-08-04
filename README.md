@@ -375,3 +375,56 @@ async checkOwner(ctx, next) {
 
 - 使用中间件获取用户信息
 
+```
+const jwt = require('koa-jwt');
+...
+const auth = jwt({ ... });
+```
+
+## 上传头像的需求场景
+
+### 需求分析
+
+用户头像、封面图片等等
+
+- 基础功能：上传图片、生成图片链接
+
+- 附加功能：限制图片大小与类型、生成分辨率不同的图片链接、生成CDN
+
+### 使用 koa-body 中间件获取上传的文件
+
+- 安装 koa-body 替换 koa-bodyparser
+    `npm i koa-body -S` || `yarn add koa-body`
+
+- 设置图片上传目录  
+    ```
+    upload(ctx) {
+        const file = ctx.request.files.file;
+        ctx.body = { path: file.path }
+    }
+    ...
+    router.post('/upload', upload);
+    ```
+
+- 使用 Postman 上传测试
+    用 form-data 格式
+
+### 使用 koa-static 中间件生成图片链接
+
+- 安装 koa-static
+    `npm i koa-static -S` || `yarn add koa-static`
+
+- 设置静态文件目录  
+    ```
+    const koaStatic = require('koa-static');
+    app.use(koaStatic(path.join(__dirname, 'public')));
+    ```
+
+- 生成图片链接
+    ```
+    upload(ctx) {
+        const file = ctx.request.files.file;
+        const basename = path.basename(file.path);
+        ctx.body = { url: `${ctx.origin}/uploads/${basename}` }
+    }
+    ```
