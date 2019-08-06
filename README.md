@@ -543,26 +543,56 @@ const auth = jwt({ ... });
 
  - 实现获取关注人和粉丝列表接口
     ```
-    router.put('/following/:id', auth, follow)
     router.get('/:id/following', listFollowing);
-
+    ...
     async listFollowing(ctx) {
         const user = await User.findById(ctx.params.id).select('+following').populate('following'); // populate 获取详细信息
         if(!user) { ctx.throw(404); }
         ctx.body = user.following;
     }
 
+    // 查找条件是 following 中有‘自己’ id 的用户
+    async listFollowers(ctx) {
+        const user = await User.find({ following: ctx.params.id });
+        ctx.body = user;
+    }
+    ```
+
+ - 实现关注和取消接口
+    ```
+    router.put('/following/:id', auth, follow)
+    ...
     async follow(ctx) {
         const who = await User.findById(ctx.state.user._id).select('+following');
-        if(!who.following.map(id => id.toString()).includes(ctx.params.id)) {
+        // 判断 following 数组中是否有这个 id && 是不是自己
+        if(!who.following.map(id => id.toString()).includes(ctx.params.id) && ctx.params.id!==who._id.toString()) {
             who.following.push(ctx.params.id);
+            who.save();
+        }
+        ctx.status = 204;
+    }
+
+    async unfollow(ctx) {
+        const who = await User.findById(ctx.state.user._id).select('+following');
+        const index = who.following.map(id => id.toString()).indexOf(ctx.params.id);
+        if(index > -1) {
+            who.following.splice(index, 1);
             who.save();
         }
         ctx.status = 204;
     }
     ```
 
- - 实现关注和取消接口
+### 编写校验用户存在与否的中间件
 
+*防止关注不存在的用户*
 
+```
+async checkUserExist(ctx, next) {
+    const user = await User.findById(ctx.params.id);
+    if(!user) { ctx.throw(404, '用户不存在'); }
+    next();
+}
+```
 
+## 话题模块

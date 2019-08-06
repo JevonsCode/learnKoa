@@ -76,10 +76,32 @@ class UsersCtl {
         ctx.body = user.following;
     }
 
+    async listFollowers(ctx) {
+        const user = await User.find({ following: ctx.params.id });
+        ctx.body = user;
+    }
+
+    async checkUserExist(ctx, next) {
+        const user = await User.findById(ctx.params.id);
+        if(!user) { ctx.throw(404, '用户不存在'); }
+        await next();
+    }
+
     async follow(ctx) {
         const who = await User.findById(ctx.state.user._id).select('+following');
-        if(!who.following.map(id => id.toString()).includes(ctx.params.id)) {
+        // 判断 following 数组中是否有这个 id
+        if(!who.following.map(id => id.toString()).includes(ctx.params.id) && ctx.params.id!==who._id.toString()) {
             who.following.push(ctx.params.id);
+            who.save();
+        }
+        ctx.status = 204;
+    }
+
+    async unfollow(ctx) {
+        const who = await User.findById(ctx.state.user._id).select('+following');
+        const index = who.following.map(id => id.toString()).indexOf(ctx.params.id);
+        if(index > -1) {
+            who.following.splice(index, 1);
             who.save();
         }
         ctx.status = 204;
