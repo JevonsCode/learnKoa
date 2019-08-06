@@ -3,12 +3,14 @@ const User = require('../models/users');
 const { secret } = require('../config');
 
 class UsersCtl {
-    async find(ctx) {
+    async find(ctx) {   
         ctx.body = await User.find();
     }
 
     async findById(ctx) {
-        const user = await User.findById(ctx.params.id);
+        const { fields } = ctx.query;
+        const selectFields = fields ? fields.split(';').filter(f => f).map(f => ' +' + f).join('') : '';
+        const user = await User.findById(ctx.params.id).select(selectFields);
         if(!user) {
             ctx.throw(404, '用户不存在');
         }
@@ -35,7 +37,15 @@ class UsersCtl {
     async update(ctx) {
         ctx.verifyParams({
             name: { type: 'string', required: false },
-            password: { type: 'string', required: false }
+            password: { type: 'string', required: false },
+
+            avatar_url: { type: 'string', required: false },
+            gender: { type: 'string', required: false },
+            headline: { type: 'string', required: false },
+            locations: { type: 'array', itemType: 'string', required: false },
+            business: { type: 'string', required: false },
+            employments: { type: 'array', itemType: 'object', required: false },
+            educations: { type: 'array', itemType: 'object', required: false },
         });
         const user = await User.findByIdAndUpdate(ctx.params.id, ctx.request.body);
         if(!user) { ctx.throw(404, '用户不存在'); }
@@ -58,6 +68,21 @@ class UsersCtl {
         const { _id, name } = user;
         const token = jsonwebtoken.sign({ _id, name }, secret, { expiresIn: '7d' });
         ctx.body = { token };
+    }
+
+    async listFollowing(ctx) {
+        const user = await User.findById(ctx.params.id).select('+following').populate('following'); // populate 获取详细信息
+        if(!user) { ctx.throw(404); }
+        ctx.body = user.following;
+    }
+
+    async follow(ctx) {
+        const who = await User.findById(ctx.state.user._id).select('+following');
+        if(!who.following.map(id => id.toString()).includes(ctx.params.id)) {
+            who.following.push(ctx.params.id);
+            who.save();
+        }
+        ctx.status = 204;
     }
 }
 

@@ -428,3 +428,141 @@ const auth = jwt({ ... });
         ctx.body = { url: `${ctx.origin}/uploads/${basename}` }
     }
     ```
+
+### 用前端页面上传文件  
+
+*静态文件都写在`/public`中*
+
+```
+<form action="/upload" enctype="multipart/form-data" method="POST">
+    <!-- image/png || .png, .jpg || image/* -->
+    <input type="file" name="file" accept="image/*">
+    <button type="submit">UPLOAD</button>
+</form>
+```
+
+## 个人资料模块
+
+### 需求分析  
+
+- 不同类型（如字符串、数组）的属性
+
+- 字段过滤
+
+### 个人资料的 schema 设计  
+
+- 分析数据结构  
+
+- 设计个人资料的 schema  
+    gender: { type: String, enum: ['male', 'female'], default: 'male', required: true },
+    枚举、默认值的写法
+
+    ```
+    const userSchema = new Schema({
+        __v: { type: Number, select: false },
+        name: { type: String, required: true },
+        password: { type: String, required: true, select: false },
+
+        avatar_url: { type: String },
+        gender: { type: String, enum: ['male', 'female'], default: 'male', required: true },
+        headline: { type: String },
+        locations: { type: [{ type: String }] },
+        business: { type: String },
+        employments: {
+            type: [{
+                company: { type: String },
+                job: { type: String }
+            }]
+        },
+        educations: {
+            type: [{
+                school: { type: String },
+                major: { type: String },
+                diploma: { type: Number, enum: [1, 2, 3, 4, 5] },
+                entrance_year: { type: Number },
+                graduation_year: { type: Number }
+            }]
+        }
+    });
+    ```
+ 
+### 参数校验
+
+- 分析个人资料的数据结构
+
+- 编写代码校验个人资料参数
+    ```
+    ctx.verifyParams({
+        name: { type: 'string', required: false },
+        password: { type: 'string', required: false },
+
+        avatar_url: { type: 'string', required: false },
+        gender: { type: 'string', required: false },
+        headline: { type: 'string', required: false },
+        locations: { type: 'array', itemType: 'string', required: false },
+        business: { type: 'string', required: false },
+        employments: { type: 'array', itemType: 'object', required: false },
+        educations: { type: 'array', itemType: 'object', required: false },
+    });
+    ```
+
+### 字段过滤 
+
+- 重新设计 schema 的隐藏字段
+    给详细信息设置`select: false`
+
+- 通过查询字符串显示隐藏字段
+    通过`.select(字段)`打开
+    ```
+    const { fields } = ctx.query;
+    const selectFields = fields ? fields.split(';').filter(f => f).map(f => ' +' + f).join('') : '';
+    const user = await User.findById(ctx.params.id).select(selectFields);
+    ```
+
+## 关注与粉丝模块
+
+### 细化功能点
+
+- 关注、取消关注
+
+- 获取关注人、粉丝列表（用户-用户多对多关系）
+
+### 关注与粉丝的 schema 设计
+
+- 分析关注与粉丝的数据结构
+
+- 设计关注与粉丝的 schema  
+    ```
+    following: {
+        type: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+        select: false
+    }
+    ```
+
+### RESTful 风格的关注与粉丝接口
+
+ - 实现获取关注人和粉丝列表接口
+    ```
+    router.put('/following/:id', auth, follow)
+    router.get('/:id/following', listFollowing);
+
+    async listFollowing(ctx) {
+        const user = await User.findById(ctx.params.id).select('+following').populate('following'); // populate 获取详细信息
+        if(!user) { ctx.throw(404); }
+        ctx.body = user.following;
+    }
+
+    async follow(ctx) {
+        const who = await User.findById(ctx.state.user._id).select('+following');
+        if(!who.following.map(id => id.toString()).includes(ctx.params.id)) {
+            who.following.push(ctx.params.id);
+            who.save();
+        }
+        ctx.status = 204;
+    }
+    ```
+
+ - 实现关注和取消接口
+
+
+
