@@ -3,13 +3,19 @@ const User = require('../models/users');
 const { secret } = require('../config');
 
 class UsersCtl {
-    async find(ctx) {   
-        ctx.body = await User.find();
+    async find(ctx) {
+        const { page, per_page = 10, q } = ctx.query;
+        const qArr = q.split('').filter(r => r).join('.*');
+        const pageNum = Math.max(isNaN(page - 0) ? 1 : page - 0, 1) - 1;
+        const perPage = Math.max(isNaN(per_page - 0) ? 10 : per_page - 0 - 0, 1);
+        ctx.body = await User
+        .find({ name: new RegExp(`.*${qArr}.*`) })
+        .limit(perPage).skip(perPage * pageNum);
     }
 
     async findById(ctx) {
-        const { fields } = ctx.query;
-        const selectFields = fields ? fields.split(';').filter(f => f).map(f => ' +' + f).join('') : '';
+        const { fields = '' } = ctx.query;
+        const selectFields = fields.split(';').filter(f => f && f!=='password').map(item => ' +' + item).join('');
         const user = await User.findById(ctx.params.id).select(selectFields);
         if(!user) {
             ctx.throw(404, '用户不存在');

@@ -608,5 +608,37 @@ async checkUserExist(ctx, next) {
 ### RESTful 风格的话题增改查接口
 
 - 设计 Schema
+    ```
+    const topicSchema = new Schema({
+        __v: { type: Number, select: false },
+        name: { type: String, required: true },
+        avatar_url: { type: String },
+        introduction: { type: String, select: false },
+    });
+    ```
 
 - 实现 RESTful 风格的增改查接口
+    与 User 相同
+
+### RESTful API ———— 分页
+
+- 实现分页逻辑
+    ```
+    // 话题
+    const { page, per_page = 10, q } = ctx.query;
+    const pageNum = Math.max(isNaN(page) ? 1 : page - 0, 1) - 1;
+    const perPage = Math.max(isNaN(per_page) ? 10 : per_page - 0 - 0, 1);
+    ctx.body = await Topic.find().limit(perPage).skip(perPage * pageNum);
+    ```
+
+### RESTful API ———— 模糊搜索
+
+- 实现模糊搜索逻辑
+    ```
+    ...
+    const qArr = q.split('').filter(r => r).join('.*');
+    ...
+    ctx.body = await Topic
+    .find({ name: new RegExp(`.*${qArr}.*`) })
+        ...
+    ```
