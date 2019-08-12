@@ -39,7 +39,7 @@ router.post('/login', login);
 
 router.get('/:id/following', listFollowing);
 
-router.get('/:id/followers', listFollowers);
+router.get('/:id/followers', checkUserExist, listFollowers);
 
 router.put('/following/:id', auth, checkUserExist, follow);
 

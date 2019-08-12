@@ -13,7 +13,7 @@ class TopicCtl {
 
     async checkTopicExist(ctx, next) {
         const topic = await Topic.findById(ctx.params.id);
-        if(!topic) { ctx.throw(404, '话题不存在'); }
+        if (!topic) { ctx.throw(404, '话题不存在'); }
         await next();
     }
 
@@ -32,7 +32,7 @@ class TopicCtl {
         });
         const { name } = ctx.request.body;
         const repeatedUser = await Topic.findOne({ name });
-        if(repeatedUser) { ctx.throw(409, '话题已经存在') }; // 409 状态码表示冲突
+        if (repeatedUser) { ctx.throw(409, '话题已经存在') }; // 409 状态码表示冲突
         const topic = await new Topic(ctx.request.body).save();
         ctx.body = topic;
     }
@@ -44,8 +44,13 @@ class TopicCtl {
             introduction: { type: 'string', required: false }
         });
         const topic = await Topic.findByIdAndUpdate(ctx.params.id, ctx.request.body);
-        if(!topic) { throw(404, '话题不存在'); }
+        if (!topic) { throw (404, '话题不存在'); }
         ctx.body = topic;
+    }
+
+    async listFollowers(ctx) {
+        const users = await users.find({ followingTopics: ctx.params.id });
+        ctx.body = users;
     }
 }
 

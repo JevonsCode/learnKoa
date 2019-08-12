@@ -16,6 +16,6 @@ router.get('/:id', checkQuestionExist, findById);
 
 router.patch('/:id', auth, checkQuestionExist, checkQuestioner, update);
 
-router.delete('/:id', del);
+router.delete('/:id', auth, checkQuestionExist, checkQuestioner, update);
 
 module.exports = router;
