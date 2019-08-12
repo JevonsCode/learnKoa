@@ -1,4 +1,6 @@
+const PWD = require('./pwd.json')
+console.log(PWD)
 module.exports = {
-    secret: 'jwt-secret',
-    connectionStr: 'mongodb+srv://jevons:toLearn@learn-h3neu.mongodb.net/test?retryWrites=true&w=majority'
+    secret: PWD.SECRET,
+    connectionStr: `mongodb+srv://jevons:${PWD.PASSWD}@learn-h3neu.mongodb.net/test?retryWrites=true&w=majority`
 }

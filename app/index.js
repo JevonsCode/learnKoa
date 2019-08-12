@@ -9,12 +9,14 @@ const app = new Koa();
 const routing = require('./routes');
 const { connectionStr } = require('./config');
 
-mongoose.connect(connectionStr, { useNewUrlParser: true }, () => console.log('MongoDB connect success 👌'));
+mongoose.connect(connectionStr, { useNewUrlParser: true }, () => console.log(
+    ' 🍥 🍥 🍥   MongoDB connect success  🍥 🍥 🍥 '
+));
 mongoose.connection.on('error', console.error);
 
 app.use(koaStatic(path.join(__dirname, 'public')));
 app.use(error({
-    postFormat: (e, {stack, ...others}) => process.env.NODE_ENV === 'production' ? others : {stack, ...others}
+    postFormat: (e, { stack, ...others }) => process.env.NODE_ENV === 'production' ? others : { stack, ...others }
 }));
 
 app.use(koaBody({

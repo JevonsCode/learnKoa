@@ -625,7 +625,7 @@ async checkUserExist(ctx, next) {
 - 实现分页逻辑
     ```
     // 话题
-    const { page, per_page = 10, q } = ctx.query;
+    const { page, per_page = 10, q = '' } = ctx.query;
     const pageNum = Math.max(isNaN(page) ? 1 : page - 0, 1) - 1;
     const perPage = Math.max(isNaN(per_page) ? 10 : per_page - 0 - 0, 1);
     ctx.body = await Topic.find().limit(perPage).skip(perPage * pageNum);
@@ -640,5 +640,111 @@ async checkUserExist(ctx, next) {
     ...
     ctx.body = await Topic
     .find({ name: new RegExp(`.*${qArr}.*`) })
-        ...
+    ...
     ```
+
+### 用户属性中的话题引用
+
+- 使用话题引用替代部分用户属性  
+    ```
+    ...
+    locations: { type: [{ type: Schema.Types.ObjectId, ref: 'Topic' }], select: false },
+    business: { type: Schema.Types.ObjectId, ref: 'Topic', select: false },
+    employments: {
+        type: [{
+            company: { type: Schema.Types.ObjectId, ref: 'Topic' },
+            job: { type: Schema.Types.ObjectId, ref: 'Topic' }
+        }],
+        select: false
+    },
+    educations: {
+        type: [{
+            school: { type: Schema.Types.ObjectId, ref: 'Topic' },
+            major: { type: Schema.Types.ObjectId, ref: 'Topic' },
+            diploma: { type: Number, enum: [1, 2, 3, 4, 5] },
+            entrance_year: { type: Number },
+            graduation_year: { type: Number }
+        }],
+        select: false
+    },
+    ...
+    ```
+
+    *tip: populate重新设计*
+    ```
+    const populateStr = filterStr.map(item => {
+        if(item === 'employments') {
+            return 'employments.company employments.job'
+        }
+        if(item === 'employments') {
+            return 'educations.school educations.major'
+        }
+        return item
+    }).join(' ');
+    const user = await User.findById(ctx.params.id).select(selectFields)
+        .populate(populateStr);
+    ```
+
+### RESTful 关注话题接口
+
+
+    ```
+    async listFollowingTopics(ctx) {
+        const user = await User.findById(ctx.params.id).select('+followingTopics').populate('followingTopics'); // populate 获取详细信息
+        if(!user) { ctx.throw(404, '用户不存在'); }
+        ctx.body = user.followingTopics;
+    }
+
+    async followTopic(ctx) {
+        const me = await User.findById(ctx.state.user._id).select('+followingTopics');
+        // 判断 followingTopics 数组中是否有这个 id
+        if(!me.followingTopics.map(id => id.toString()).includes(ctx.params.id) && ctx.params.id!==me._id.toString()) {
+            me.followingTopics.push(ctx.params.id);
+            me.save();
+        }
+        ctx.status = 204;
+    }
+
+    async unfollowTopic(ctx) {
+        const me = await User.findById(ctx.state.user._id).select('+followingTopics');
+        const index = me.followingTopics.map(id => id.toString()).indexOf(ctx.params.id);
+        if(index > -1) {
+            me.followingTopics.splice(index, 1);
+            me.save();
+        }
+        ctx.status = 204;
+    }
+    ```
+
+    ```
+    // 检查话题是否存在
+    async checkTopicExist(ctx, next) {
+        const topic = await Topic.findById(ctx.params.id);
+        if(!topic) { ctx.throw(404, '话题不存在'); }
+        await next();
+    }
+    ```
+
+## 问题模块
+
+### 问题模块需求分析
+
+- 问题的增删改查
+
+- 用户的问题列表（用户-问题一对多关系）
+
+- 话题的问题列表 + 问题的话题列表（话题-问题多对多关系）
+
+- 关注/取消关注问题
+
+### 用户-问题一对多关系
+
+- 实现增删改查
+    ```
+    
+    ```
+
+- 实现用户的问题列表接口
+    
+
+*tip: `.find({ $or: [{ title: qRegExp }, { description: qRegExp }] })` 匹配或的关系*  

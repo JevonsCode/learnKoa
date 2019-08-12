@@ -2,13 +2,19 @@ const Topic = require('../models/topics');
 
 class TopicCtl {
     async find(ctx) {
-        const { page, per_page = 10, q } = ctx.query;
+        const { page, per_page = 10, q = '' } = ctx.query;
         const qArr = q.split('').filter(r => r).join('.*');
         const pageNum = Math.max(isNaN(page - 0) ? 1 : page - 0, 1) - 1;
         const perPage = Math.max(isNaN(per_page - 0) ? 10 : per_page - 0 - 0, 1);
         ctx.body = await Topic
-        .find({ name: new RegExp(`.*${qArr}.*`) })
-        .limit(perPage).skip(perPage * pageNum);
+            .find({ name: new RegExp(`.*${qArr}.*`) })
+            .limit(perPage).skip(perPage * pageNum);
+    }
+
+    async checkTopicExist(ctx, next) {
+        const topic = await Topic.findById(ctx.params.id);
+        if(!topic) { ctx.throw(404, '话题不存在'); }
+        await next();
     }
 
     async findById(ctx) {
