@@ -1,4 +1,6 @@
 const Topic = require('../models/topics');
+const Users = require('../models/users');
+const Question = require('../models/questions');
 
 class TopicCtl {
     async find(ctx) {
@@ -49,8 +51,13 @@ class TopicCtl {
     }
 
     async listFollowers(ctx) {
-        const users = await users.find({ followingTopics: ctx.params.id });
+        const users = await Users.find({ followingTopics: ctx.params.id });
         ctx.body = users;
+    }
+
+    async listQuestions(ctx) {
+        const questions = await Question.find({ topics: ctx.params.id });
+        ctx.body = questions;
     }
 }
 

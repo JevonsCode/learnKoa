@@ -5,7 +5,7 @@ const { Schema, model } = mongoose;
 const userSchema = new Schema({
     __v: { type: Number, select: false },
     name: { type: String, required: true },
-    password: { type: String, required: true, select: false },
+    password: { type: String, required: true, select: 1 },
 
     avatar_url: { type: String },
     gender: { type: String, enum: ['male', 'female'], default: 'male', required: true },

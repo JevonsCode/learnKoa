@@ -22,7 +22,7 @@ class QuestionCtl {
     async findById(ctx) {
         const { fields = '' } = ctx.query;
         const selectFields = fields.split(';').filter(f => f).map(item => ' +' + item).join('');
-        const question = await Question.findById(ctx.params.id).select(selectFields).populate('questioner');
+        const question = await Question.findById(ctx.params.id).select(selectFields).populate('questioner topics');
         ctx.body = question;
     }
 
@@ -33,7 +33,7 @@ class QuestionCtl {
         });
         // const { questioner } = ctx.request.body;
         // const repeatedUser = await Question.findOne({ name });
-        // if(repeatedUser) { ctx.throw(409, '话题已经存在') }; // 409 状态码表示冲突
+        // if(repeatedUser) { ctx.throw(409, '问题已经存在') }; // 409 状态码表示冲突
         const question = await new Question({ ...ctx.request.body, questioner: ctx.state.user._id }).save();
         ctx.body = question;
     }
@@ -49,7 +49,7 @@ class QuestionCtl {
             name: { type: 'string', required: false },
             description: { type: 'string', required: false }
         });
-        await ctx.state.question.update(ctx.request.body); // findByID 在 check... 存入 state 
+        await ctx.state.question.updateOne(ctx.request.body); // findByID 在 check... 存入 state 
         ctx.body = ctx.state.question;
     }
 

@@ -725,6 +725,14 @@ async checkUserExist(ctx, next) {
     }
     ```
 
+    ```
+    // 查询关注话题的人
+    async listFollowers(ctx) {
+        const users = await Users.find({ followingTopics: ctx.params.id });
+        ctx.body = users;
+    }
+    ```
+
 ## 问题模块
 
 ### 问题模块需求分析
@@ -741,13 +749,95 @@ async checkUserExist(ctx, next) {
 
 - 实现增删改查
     ```
-    
+    class QuestionCtl {
+        async find(ctx) {
+            const { page, per_page = 10, q = '' } = ctx.query;
+            const qArr = q.split('').filter(r => r).join('.*');
+            const pageNum = Math.max(isNaN(page - 0) ? 1 : page - 0, 1) - 1;
+            const perPage = Math.max(isNaN(per_page - 0) ? 10 : per_page - 0 - 0, 1);
+            const qRegExp = new RegExp(`.*${qArr}.*`);
+            ctx.body = await Question
+                .find({ $or: [{ title: qRegExp }, { description: qRegExp }] })
+                .limit(perPage).skip(perPage * pageNum);
+        }
+
+        async checkQuestionExist(ctx, next) {
+            const question = await Question.findById(ctx.params.id).select('+questioner');
+            if (!question) { ctx.throw(404, '问题不存在'); }
+            ctx.state.question = question;
+            await next();
+        }
+
+        async findById(ctx) {
+            const { fields = '' } = ctx.query;
+            const selectFields = fields.split(';').filter(f => f).map(item => ' +' + item).join('');
+            const question = await Question.findById(ctx.params.id).select(selectFields).populate('questioner');
+            ctx.body = question;
+        }
+
+        async create(ctx) {
+            ctx.verifyParams({
+                title: { type: 'string', required: true },
+                description: { type: 'string', required: false }
+            });
+            const question = await new Question({ ...ctx.request.body, questioner: ctx.state.user._id }).save();
+            ctx.body = question;
+        }
+
+        async checkQuestioner(ctx, next) {
+            const { question } = ctx.state;
+            if (question.questioner.toString() !== ctx.state.user._id) { ctx.status = (403, '没有权限') }
+            await next();
+        }
+
+        async update(ctx) {
+            ctx.verifyParams({
+                name: { type: 'string', required: false },
+                description: { type: 'string', required: false }
+            });
+            await ctx.state.question.updateOne(ctx.request.body); // findByID 在 check... 存入 state 
+            ctx.body = ctx.state.question;
+        }
+
+        async delete(ctx) {
+            await Question.findByIdAndRemove(ctx.params.id);
+            ctx.status = 204;
+        }
+    }
     ```
 
 - 实现用户的问题列表接口
+    ```
+    router.get('/:id/questions', listQuestions);
+    ...
+    async listQuestions(ctx) {
+        const questions = await Question.find({ questioner: ctx.params.id });
+        ctx.body = questions;
+    }
+    ```
 
 
 *tip: `.find({ $or: [{ title: qRegExp }, { description: qRegExp }] })` 匹配或的关系*  
 
+### 话题多对多关系的设计与实现
 
-// 5:26
+- 实现问题的话题列表接口
+    ```
+    topics: {
+        type: [{ type: Schema.Types.ObjectId, ref: 'Topic' }],
+        select: false
+    }
+    ...
+    const question = await Question.findById(ctx.params.id).select(selectFields).populate('questioner topics');
+    ```
+
+- 实现话题的问题列表接口
+    ```
+    async listQuestions(ctx) {
+        const questions = await Question.find({ topics: ctx.params.id });
+        ctx.body = questions;
+    }
+    ...
+    router.get('/:id/questions', checkTopicExist, listQuestions);
+    ```
+
