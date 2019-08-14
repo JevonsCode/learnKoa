@@ -841,3 +841,173 @@ async checkUserExist(ctx, next) {
     router.get('/:id/questions', checkTopicExist, listQuestions);
     ```
 
+## 答案模块
+
+### 答案模块需求分析
+
+- 答案的增删改查
+
+- 问题-答案/用户-答案 一对多
+
+- 赞/踩 答案
+
+- 收藏
+
+### 问题-答案模块二级嵌套的CURD接口
+
+*答案从属与问题，所以用二级嵌套*
+
+- 设计数据库的 Schema
+    ```
+    const answerSchema = new Schema({
+        __v: { type: Number, select: false },
+        content: { type: String, required: true },
+        answerer: { type: Schema.Types.ObjectId, ref: 'User', required: true, select: false },
+        questionId: { type: String, required: true }
+    });
+    ```
+
+- 实现 CURD
+    ```
+    class AnswerCtl {
+        async find(ctx) {
+            const { page, per_page = 10, q = '' } = ctx.query;
+            const qArr = q.split('').filter(r => r).join('.*');
+            const pageNum = Math.max(isNaN(page - 0) ? 1 : page - 0, 1) - 1;
+            const perPage = Math.max(isNaN(per_page - 0) ? 10 : per_page - 0 - 0, 1);
+            const qRegExp = new RegExp(`.*${qArr}.*`);
+            ctx.body = await Answer
+                .find({ content: qRegExp, questionId: ctx.params.questionId })
+                .limit(perPage).skip(perPage * pageNum);
+        }
+
+        async checkAnswerExist(ctx, next) {
+            const answer = await Answer.findById(ctx.params.id).select('+answerer');
+            if (!answer) { ctx.throw(404, '答案不存在'); }
+            if (answer.questionId !== ctx.params.questionId) { ctx.throw(404, '此问题下没有此答案'); }
+            ctx.state.answer = answer;
+            await next();
+        }
+
+        async findById(ctx) {
+            const { fields = '' } = ctx.query;
+            const selectFields = fields.split(';').filter(f => f).map(item => ' +' + item).join('');
+            const answer = await Answer.findById(ctx.params.id).select(selectFields).populate('answerer');
+            ctx.body = answer;
+        }
+
+        async create(ctx) {
+            ctx.verifyParams({
+                content: { type: 'string', required: true }
+            });
+            const answerer = ctx.state.user._id;
+            const { questionId } = ctx.params;
+            const answer = await new Answer({ ...ctx.request.body, answerer, questionId }).save();
+            ctx.body = answer;
+        }
+
+        async checkAnswerer(ctx, next) {
+            const { answer } = ctx.state;
+            if (answer.answerer.toString() !== ctx.state.user._id) { ctx.status = (403, '没有权限') }
+            await next();
+        }
+
+        async update(ctx) {
+            ctx.verifyParams({
+                content: { type: 'string', required: false }
+            });
+            await ctx.state.answer.updateOne(ctx.request.body); // findByID 在 check... 存入 state 
+            ctx.body = ctx.state.answer;
+        }
+
+        async delete(ctx) {
+            await Answer.findByIdAndRemove(ctx.params.id);
+            ctx.status = 204;
+        }
+    }
+    ```
+
+### 互斥关系的赞踩答案接口设计与实现
+
+- 设计数据库 Schema
+    ```
+    likingAnswers: {
+        type: [{ type: Schema.Types.ObjectId, ref: 'Answer' }],
+        select: false
+    },
+    dislikingAnswers: {
+        type: [{ type: Schema.Types.ObjectId, ref: 'Answer' }],
+        select: false
+    }
+    ```
+
+- 实现接口
+    ```
+    async listLikingAnswers(ctx) {
+        const user = await User.findById(ctx.params.id).select('+likingAnswers').populate('likingAnswers'); // populate 获取详细信息
+        if(!user) { ctx.throw(404, '用户不存在'); }
+        ctx.body = user.likingAnswers;
+    }
+
+    async likeAnswer(ctx, next) {
+        const me = await User.findById(ctx.state.user._id).select('+likingAnswers');
+        if(!me.likingAnswers.map(id => id.toString()).includes(ctx.params.id) && ctx.params.id!==me._id.toString()) {
+            me.likingAnswers.push(ctx.params.id);
+            me.save();
+            await Answer.findByIdAndUpdate(ctx.params.id, { $inc: { voteCount: 1 } });
+        }
+        ctx.status = 204;
+        await next()
+    }
+
+    async unlikeAnswer(ctx) {
+        const me = await User.findById(ctx.state.user._id).select('+likingAnswers');
+        const index = me.likingAnswers.map(id => id.toString()).indexOf(ctx.params.id);
+        if(index > -1) {
+            me.likingAnswers.splice(index, 1);
+            me.save();
+            await Answer.findByIdAndUpdate(ctx.params.id, { $inc: { voteCount: -1 } });
+        }
+        ctx.status = 204;
+    }
+
+    async listDislikingAnswers(ctx) {
+        const user = await User.findById(ctx.params.id).select('+dislikingAnswers').populate('dislikingAnswers'); // populate 获取详细信息
+        if(!user) { ctx.throw(404, '用户不存在'); }
+        ctx.body = user.dislikingAnswers;
+    }
+
+    async dislikeAnswer(ctx, next) {
+        const me = await User.findById(ctx.state.user._id).select('+dislikingAnswers');
+        if(!me.dislikingAnswers.map(id => id.toString()).includes(ctx.params.id) && ctx.params.id!==me._id.toString()) {
+            me.dislikingAnswers.push(ctx.params.id);
+            me.save();
+        }
+        ctx.status = 204;
+        await next()
+    }
+
+    async undislikeAnswer(ctx) {
+        const me = await User.findById(ctx.state.user._id).select('+dislikingAnswers');
+        const index = me.dislikingAnswers.map(id => id.toString()).indexOf(ctx.params.id);
+        if(index > -1) {
+            me.dislikingAnswers.splice(index, 1);
+            me.save();
+        }
+        ctx.status = 204;
+    }
+    ```
+
+    路由
+
+    ```
+    router.get('/:id/likingAnswers', listLikingAnswers);
+    router.put('/likeAnswers/:id', auth, checkAnswerExist, likeAnswer, undislikeAnswer);
+    router.delete('/unlikeAnswers/:id', auth, checkAnswerExist, unlikeAnswer);
+    router.get('/:id/dislikingAnswers', listDislikingAnswers);
+    router.put('/dislikeAnswers/:id', auth, checkAnswerExist, dislikeAnswer, unlikeAnswer);
+    router.delete('/undislikeAnswers/:id', auth, checkAnswerExist, undislikeAnswer);
+    ```
+
+### RESTful 风格的收藏答案接口
+

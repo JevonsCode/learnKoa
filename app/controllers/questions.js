@@ -46,7 +46,7 @@ class QuestionCtl {
 
     async update(ctx) {
         ctx.verifyParams({
-            name: { type: 'string', required: false },
+            title: { type: 'string', required: false },
             description: { type: 'string', required: false }
         });
         await ctx.state.question.updateOne(ctx.request.body); // findByID 在 check... 存入 state 

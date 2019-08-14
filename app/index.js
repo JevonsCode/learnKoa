@@ -9,7 +9,7 @@ const app = new Koa();
 const routing = require('./routes');
 const { connectionStr } = require('./config');
 
-mongoose.connect(connectionStr, { useNewUrlParser: true }, () => console.log(
+mongoose.connect(connectionStr, { useNewUrlParser: true, useFindAndModify: false }, () => console.log(
     ' 🍥 🍥 🍥   MongoDB connect success  🍥 🍥 🍥 '
 ));
 mongoose.connection.on('error', console.error);
