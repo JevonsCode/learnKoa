@@ -1182,3 +1182,7 @@ async checkUserExist(ctx, next) {
     // 在 mongoose Schema 中直接加入 `{ timestamps: true }` 就可以有创建时间和更新时间
     , { timestamps: true }
     ```
+
+---
+
+[Postman 的接口分享](https://documenter.getpostman.com/view/8154005/SVfGzBy4?version=latest)
