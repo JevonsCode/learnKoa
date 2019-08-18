@@ -1186,3 +1186,8 @@ async checkUserExist(ctx, next) {
 ---
 
 [Postman 的接口分享](https://documenter.getpostman.com/view/8154005/SVfGzBy4?version=latest)
+
+
+Tip: 
+pm2 to set time with logs
+`NODE_ENV=production pm2 restart *** --update-env --log-date-format "YYYY-MM-DD HH:mm:ss"`
