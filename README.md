@@ -1053,3 +1053,132 @@ async checkUserExist(ctx, next) {
     router.put('/collecteAnswers/:id', auth, checkAnswerExist, collectAnswer, unlikeAnswer);
     router.delete('/uncollecteAnswers/:id', auth, checkAnswerExist, uncollectAnswer);
     ```
+
+## 评论功能
+
+### 评论功能的需求分析
+
+- 评论的增删改查
+
+- 答案-评论/问题-评论/用户-评论 一对多
+
+- 一级评论 & 二级评论
+
+- 赞/踩评论
+
+### 问题-答案-评论模块三级嵌套的增删改查接口
+
+- Schema
+    ```
+    const commentSchema = new Schema({
+        __v: { type: Number, select: false },
+        content: { type: String, required: true },
+        commentator: { type: Schema.Types.ObjectId, ref: 'User', required: true, select: false },
+        questionId: { type: String, required: true },
+        answerId: { type: String, required: true }
+    });
+    ```
+
+- CURD API
+    ```
+    class CommentCtl {
+        async find(ctx) {
+            const { page, per_page = 10, q = '' } = ctx.query;
+            const qArr = q.split('').filter(r => r).join('.*');
+            const pageNum = Math.max(isNaN(page - 0) ? 1 : page - 0, 1) - 1;
+            const perPage = Math.max(isNaN(per_page - 0) ? 10 : per_page - 0 - 0, 1);
+            const qRegExp = new RegExp(`.*${qArr}.*`);
+            const { questionId, answerId} = ctx.params
+            ctx.body = await Comment
+                .find({ content: qRegExp, questionId, answerId })
+                .limit(perPage).skip(perPage * pageNum)
+                .populate('commentator');
+        }
+
+        async checkCommentExist(ctx, next) {
+            const comment = await Comment.findById(ctx.params.id).select('+commentator');
+            if (!comment) { ctx.throw(404, '评论不存在'); }
+            if (ctx.params.questionId && comment.questionId !== ctx.params.questionId) { ctx.throw(404, '此问题下没有此评论'); }
+            if (ctx.params.answerId && comment.answerId !== ctx.params.answerId) { ctx.throw(404, '此答案下没有此评论'); }
+            ctx.state.comment = comment;
+            await next();
+        }
+
+        async findById(ctx) {
+            const { fields = '' } = ctx.query;
+            const filterFields = fields.split(';').filter(f => f);
+            const selectFields = filterFields.map(item => ' +' + item).join('');
+            const populateStr = filterFields.map(item => {
+                if(item === 'commentator') {
+                    return 'commentator'
+                }
+                return item
+            }).join(' ');
+            const comment = await Comment.findById(ctx.params.id).select(selectFields).populate(populateStr);
+            ctx.body = comment;
+        }
+
+        async create(ctx) {
+            ctx.verifyParams({
+                content: { type: 'string', required: true }
+            });
+            const commentator = ctx.state.user._id;
+            const { questionId, answerId } = ctx.params;
+            const comment = await new Comment({ ...ctx.request.body, commentator, questionId, answerId }).save();
+            ctx.body = comment;
+        }
+
+        async checkCommentator(ctx, next) {
+            const { comment } = ctx.state;
+            if (comment.commentator.toString() !== ctx.state.user._id) { ctx.status = (403, '没有权限') }
+            await next();
+        }
+
+        async update(ctx) {
+            ctx.verifyParams({
+                content: { type: 'string', required: false }
+            });
+            await ctx.state.comment.updateOne(ctx.request.body); // findByID 在 check... 存入 state 
+            ctx.body = ctx.state.comment;
+        }
+
+        async delete(ctx) {
+            await Comment.findByIdAndRemove(ctx.params.id);
+            ctx.status = 204;
+        }
+    }
+    ```
+
+### 一级评论与二级评论接口的设计与实现
+
+- Schema
+    ```
+    ...
+    rootCommentId: { type: String },
+    replyTo: {  type: Schema.Types.ObjectId, ref: 'User' }
+    ```
+
+- CR API
+    ```
+    ...
+    .find({ content: qRegExp, questionId, answerId, rootCommentId })
+    ...
+    .populate('commentator replyTo');
+    ...
+    ctx.verifyParams({
+        content: { type: 'string', required: true },
+        rootCommentId: { type: 'string', required: false },
+        replyTo: { type: 'string', required: false }
+    });
+    ...
+    const { questionId, answerId } = ctx.params;
+    ```
+
+### 添加日期
+
+- 设计数据库 Schema
+    ```
+    ...
+    // 在 mongoose Schema 中直接加入 `{ timestamps: true }` 就可以有创建时间和更新时间
+    , { timestamps: true }
+    ```
